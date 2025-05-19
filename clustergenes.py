@@ -1,5 +1,6 @@
 import sklearn
 import numpy as np
+from tqdm.auto import tqdm
 
 
 def ParabolicElbow(data, p, k):
@@ -42,11 +43,20 @@ def CountClusters(dist, p, k):
 
 
 class GeneCluster:
-    def __init__(self, patient_data, k=4, min_clusters=5, p_points_per_unit=50):
+    def __init__(
+        self,
+        patient_data,
+        k=4,
+        min_clusters=5,
+        max_clusters=50,
+        p_points_per_unit=50,
+        use_tqdm=False,
+    ):
         # --- initialization ---
 
         self.k_value = k
         self.min_clusters = min_clusters
+        self.max_clusters = max_clusters
         self.p_points_per_unit = p_points_per_unit
         self.clustering = sklearn.cluster.AgglomerativeClustering(
             n_clusters=1,
@@ -64,14 +74,23 @@ class GeneCluster:
 
         while (
             CountClusters(self.clustering.distances_, p_max, self.k_value)
-            > self.min_clusters
+            >= self.min_clusters
         ):
             p_max *= 2
 
         p_space = np.linspace(0, p_max, p_max * self.p_points_per_unit)
-        count_space = np.vectorize(
-            lambda p: CountClusters(self.clustering.distances_, p, self.k_value)
-        )(p_space)
+        count_space = np.zeros_like(p_space)
+
+        def range_wrapper(x):
+            return x
+
+        if use_tqdm:
+            range_wrapper = tqdm
+
+        for i in range_wrapper(range(len(p_space))):
+            count_space[i] = CountClusters(
+                self.clustering.distances_, p_space[i], self.k_value
+            )
 
         last_idx = 0
         intervals = []
@@ -82,13 +101,16 @@ class GeneCluster:
             if count_space[i] != count_prev:
                 p_start = p_space[last_idx]
                 p_end = p_space[i - 1]
-                intervals.append(
-                    dict(
-                        nclusters=count_prev,
-                        p_interval=[p_start, p_end],
-                        p_length=p_end - p_start,
+                nclusters = int(count_prev)
+
+                if nclusters <= max_clusters:
+                    intervals.append(
+                        dict(
+                            nclusters=nclusters,
+                            p_interval=[p_start, p_end],
+                            p_length=p_end - p_start,
+                        )
                     )
-                )
                 last_idx = i
 
         intervals.sort(key=lambda x: x["p_length"], reverse=True)

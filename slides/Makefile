@@ -3,7 +3,7 @@ OBJDIR=./obj
 OVERLEAFDIR=./overleaf
 
 BASENAME=slides
-OUTNAME=Kosterov-25-slides
+OUTNAME=slides
 
 BASETEX=./$(BASENAME).tex
 BASEOBJ=$(OBJDIR)/$(BASENAME).pdf
@@ -42,7 +42,8 @@ build: filesys
 	$(call LOGSECTION, Starting build)
 	$(LATEX) $(BASETEX)
 	$(call LOGSECTION, Optimizing)
-	pdfsizeopt --do-require-image-optimizers=no --quiet $(BASEOBJ) $(BASEOUT)
+	# pdfsizeopt --do-require-image-optimizers=no --quiet $(BASEOBJ) $(BASEOUT)
+	cp $(BASEOBJ) $(BASEOUT)
 
 overleaf-package:
 	rm -rf $(OVERLEAFDIR)
